@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SafeAreaView, View, Text, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -14,42 +14,51 @@ const data = [
 ];
 const ProfileEditScreen = ({ route, navigation }) => {
   const items = route.params.data.data;
+  console.log(route.params);
   const date_object = new Date(items.date_of_birth)
-  console.log(items.type);
+  console.log(date_object);
   const [id, setId] = useState(items.id)
   const [name, setName] = useState(items.name);
   const [email, setemail] = useState(items.email);
   const [address, setaddress] = useState(items.address);
   const [phone, setphone] = useState(items.phone);
   const [selectedDate, setSelectedDate] = useState(date_object);
-  const [selectedImage, setSelectedImage] = useState();
-  const [value, setValue] = useState(items.type);
+  const [dateone, setDate] = useState(items.date_of_birth);
+  const [selectedImage, setSelectedImage] = useState(items.profile);
+  const [value, setValue] = useState(parseInt(items.type));
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [isFocus, setIsFocus] = useState(false);
-  const [uri, seturi] = useState();
-
+  const [error, seterror] = useState({});
+  const Clear = () => {
+    setName(' ');
+    setemail(' ');
+    setaddress(' ');
+    setphone(' ');
+    seterror('');
+    // setSelectedDate({})
+  }
   const Confrim = async (name) => {
     try {
-
-      console.log(name);
-      const response = await fetch('http://10.0.2.2:8000/api/profile/edit', {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch('http://172.20.80.99:8000/api/profile/edit', {
         method: 'POST',
         headers: {
+          'Authorization': 'Bearer ' + token,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({name})
-      })
-      const data = await response.json();
-      if (data.errors) {
-        alert(JSON.stringify(data.errors));
-      }
-      else {
-        navigation.navigate('Gg', { name: name, email: email, address: address, phone: phone, value: value, id: id });
-      }
+        body: JSON.stringify({ name: name })
+      }).then(res => res.json()).
+        then(resData => {
+          if (resData.success) {
+            navigation.navigate('Gg', { name: name });
+          } else {
+            seterror(resData.message);
+          }
+        })
     }
     catch (error) {
-      return error.response.data.errors;
+      console.error(error);
     }
   }
 
@@ -65,12 +74,12 @@ const ProfileEditScreen = ({ route, navigation }) => {
   const handleConfirm = (date) => {
     setSelectedDate(date);
     hideDatePicker();
+    setDate(`${date.getFullYear()}-${("0" + (date.getMonth() + 1)).slice(-2)}-${("0" + date.getDate()).slice(-2)}`);
   };
 
   const launch = async () => {
     const result = await launchImageLibrary();
     setSelectedImage(result);
-    seturi(result.uri.toString())
   }
   return (
     <ScrollView style={{ flex: 1 }}>
@@ -78,14 +87,24 @@ const ProfileEditScreen = ({ route, navigation }) => {
         <Avatar
           rounded
           size={130}
-          source={selectedImage && selectedImage.assets ? ({ uri: selectedImage.assets[0].uri }) : ({ uri: 'http://t1.gstatic.com/licensed-image?q=tbn:ANd9GcT2VEmIR68pPnPgko_LL5shFwfUOuAhX0JAx_CIVhohEWoArcpr9H2VXPgZRiy3_1UIGhiwd8xnqMgdtNA' })}
-
+          source={selectedImage && selectedImage.assets ? ({ uri: selectedImage.assets[0].uri }) : ({ uri: 'http://172.20.80.99:8000/storage/' + selectedImage })}
+        // source={{ uri: 'http://172.20.80.99:8000/storage/' + selectedImage }}
         />
+
         <Button title='Select an Image' onPress={launch} />
-        <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10, marginTop: 10 }} placeholder="Enter your name" value={name} onChangeText={text => setName(text)} />
-        <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Email" value={email} onChangeText={text => setemail(text)} />
-        <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Phone Number" value={phone} onChangeText={text => setphone(text)} />
-        <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Address" numberOfLines={7} multiline={true} value={address} onChangeText={text => setaddress(text)} />
+        <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10, marginTop: 10 }} placeholder="Enter your name" value={name} onChangeText={text => setName(text)} />
+        {error.name && (
+          <Text style={{ color: 'red' }}>{error.name}</Text>
+        )}
+        <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Email" value={email} onChangeText={text => setemail(text)} />
+        {error.email && (
+          <Text style={{ color: 'red' }}>{error.email}</Text>
+        )}
+        <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Phone Number" keyboardType='numeric' value={phone} onChangeText={text => setphone(text)} />
+        {error.phone && (
+          <Text style={{ color: 'red' }}>{error.phone}</Text>
+        )}
+        <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Address" numberOfLines={7} multiline={true} value={address} onChangeText={text => setaddress(text)} />
 
         <Button title="Select a date" onPress={showDatePicker} />
         <View style={{ flexDirection: 'row' }}>
@@ -102,7 +121,14 @@ const ProfileEditScreen = ({ route, navigation }) => {
           </Text>
         </View>
         <Dropdown
-          style={[styles.dropdown, isFocus && { borderColor: 'blue' }]}
+          initialValue={route.params.data.data.type}
+          style={{
+            borderColor: 'blue', borderRadius: 30, height: 50,
+            borderColor: '#000000',
+            borderWidth: 1,
+            paddingHorizontal: 8,
+            width: '100%',
+          }}
           placeholderStyle={styles.placeholderStyle}
           selectedTextStyle={styles.selectedTextStyle}
           inputSearchStyle={styles.inputSearchStyle}
@@ -118,9 +144,21 @@ const ProfileEditScreen = ({ route, navigation }) => {
             setIsFocus(false);
           }}
         />
-        <TouchableOpacity style={{ paddingHorizontal: 30, paddingVertical: 10, backgroundColor: 'springgreen', marginTop: 10 }}
-          onPress={() => Confrim({ id, name, email, address, phone, selectedDate, selectedImage, value })}
-        ><Text style={{ fontSize: 14 }}>Confrim</Text></TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 30 }}>
+
+          <TouchableOpacity onPress={() => navigation.navigate('passwordReset')}><Text style={{ color: 'blue', textDecorationLine: 'underline' }}>Password Reset</Text></TouchableOpacity>
+
+          <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: 'yellow', marginTop: 10, marginHorizontal: 20 }}
+            onPress={Clear}
+          >
+            <Text style={{ fontSize: 14 }}>Clear</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 10, paddingVertical: 15, backgroundColor: 'springgreen', marginTop: 10 }}
+            onPress={() => Confrim({ id, name, email, address, phone, dateone, selectedImage, value })}
+          ><Text style={{ fontSize: 14 }}>Confrim</Text></TouchableOpacity>
+
+        </View>
+
       </View>
     </ScrollView>
   );

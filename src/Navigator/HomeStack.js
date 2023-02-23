@@ -4,6 +4,7 @@ import CreatePostScreen from "../screens/createpostscreen";
 import ConfirmPostScreen from "../screens/confirmpostscreen";
 import PostEditScreen from "../screens/editpostscreen";
 import EditPostConfirm from "../screens/editpostconfirm";
+import UploadScreen from "../screens/uploadscreen";
 const Stack = createStackNavigator();
 export default function HomeStack({ navigation }) {
     return (
@@ -15,6 +16,7 @@ export default function HomeStack({ navigation }) {
             <Stack.Screen name='Confirm' component={ConfirmPostScreen} options={({ navigation })} />
             <Stack.Screen name='Edit' component={PostEditScreen} options={({ navigation })} />
             <Stack.Screen name="ConfirmEdit" component={EditPostConfirm} />
+            <Stack.Screen name="Upload" component={UploadScreen} />
         </Stack.Navigator>
     )
 }

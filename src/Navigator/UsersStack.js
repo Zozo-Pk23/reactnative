@@ -6,7 +6,7 @@ import UserAddConfirm from "../profile/useraddconfirmscreen";
 const Stack = createStackNavigator();
 export default function UsersStack({ navigation }) {
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false, }}>
             <Stack.Screen name="UserList" component={UserList} />
             <Stack.Screen name='Useradd' component={UserAddScreen} />
             <Stack.Screen name='userConfirm' component={UserAddConfirm} />

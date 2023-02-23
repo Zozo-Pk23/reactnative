@@ -1,37 +1,50 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, Button } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 const ConfirmPostScreen = ({ route, navigation }) => {
-    const { title, description } = route.params;
-    const create = async (title, description) => {
-        await fetch('http://10.0.2.2:8000/api/blogs/store', {
+    const data = route.params.data;
+    const create = async (data) => {
+        const token = await AsyncStorage.getItem('token');
+        await fetch('http://172.20.80.99:8000/api/blogs/store', {
             method: 'POST',
             headers: {
+                'Authorization': 'Bearer ' + token,
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(title, description)
-        }).then(navigation.navigate('Home'))
+            body: JSON.stringify({ data: data })
+        }).then(navigation.navigate('Home', { setloading: true }))
     }
     return (
-        <View style={{ backgroundColor: 'cyan', flex: 1, padding: 20 }}>
+        <View style={{ backgroundColor: 'white', flex: 1, padding: 20 }}>
             <Text style={{ fontSize: 40 }}>Post Confirm Form</Text>
             <View style={{
-                flexDirection: 'row', marginVertical: 100
+                flexDirection: 'row', justifyContent: 'space-between', marginTop: 50
             }}>
-                <Text style={{ alignSelf: 'center', marginRight: 20, fontSize: 20 }}>Title</Text>
-                <Text style={{ alignSelf: 'center', position: 'absolute', right: 40 }}>{JSON.stringify(title.title)}</Text>
+                <Text style={{ fontSize: 20 }}>Title</Text>
+                <Text style={{ fontSize: 16 }}>{data.title}</Text>
             </View>
             <View style={{
-                flexDirection: 'row'
+                flexDirection: 'row', justifyContent: 'space-between'
             }}>
-                <Text style={{ alignSelf: 'center', marginRight: 20, fontSize: 20 }}>Description</Text>
-                <Text style={{ alignSelf: 'center', position: 'absolute', right: 40 }}>{JSON.stringify(title.description)}</Text>
+                <Text style={{ fontSize: 20 }}>Description</Text>
+                <Text style={{ fontSize: 16, }}>{data.description}</Text>
             </View>
-            <View style={{ flexDirection: 'row', marginTop: 160, }}>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 60 }}>
                 <View>
-                    <Button title="Go back" onPress={() => navigation.goBack()} />
+                    <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#2196F3', marginTop: 10, marginHorizontal: 20 }}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={{ fontSize: 14, color: 'white' }}>Cancel</Text>
+                    </TouchableOpacity>
                 </View>
-                <View style={{ marginLeft: 200 }}>
-                    <Button title="Confrim" onPress={() => create(title, description)} />
+                <View>
+                    <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#2196F3', marginTop: 10, marginHorizontal: 20 }}
+                        onPress={() => create(route.params.data)}
+                    >
+                        <Text style={{ fontSize: 14, color: 'white' }}>Confirm</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>

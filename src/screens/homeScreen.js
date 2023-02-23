@@ -1,33 +1,74 @@
 import React, { Component, useEffect, useState } from 'react';
-import { Button } from 'react-native';
-import { Platform, StyleSheet, Text, View, FlatList } from 'react-native';
+import { Platform, StyleSheet, Text, View, FlatList, Alert } from 'react-native';
 import axios from 'axios';
-import { TextInput, TouchableHighlight } from 'react-native-gesture-handler';
-const HomeScreen = ({ navigation }) => {
+import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
+import { Modal } from 'react-native';
+import { Pressable } from 'react-native';
+import { Dialog } from "@rneui/base";
+import moment from 'moment';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+var RNFS = require('react-native-fs');
+const HomeScreen = ({ route, navigation }) => {
   const [data, setData] = useState([]);
+  const [detailmodal, setdetailmodal] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedId, setselectedId] = useState(null);
   const [search, setsearch] = useState(null);
+  const [loading, setloading] = useState(false);
   const download = async () => {
     try {
-      const response = await axios.get(`http://10.0.2.2:8000/api/blogs/download`, {
-        responseType: 'blob'
+      const token = await AsyncStorage.getItem('token');
+      let response = await axios.get(`http://172.20.80.99:8000/api/blogs`
+        , {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
+      let data = response.data;
+      console.log(data);
+
+      let csv = '';
+      const header = Object.keys(data[0]).join(',');
+      csv += header + '\n';
+
+      data.forEach(row => {
+        const values = Object.values(row).join(',');
+        csv += values + '\n';
       });
+      const dir = RNFS.ExternalDirectoryPath;
+      const path = `${dir}/api_data.csv`;
+      console.log(path);
+      RNFS.writeFile(path, csv, 'utf8')
+        .then(() => alert('CSV file saved successfully'))
+        .catch(error => console.error(error));
     }
     catch (error) {
       console.error(error);
     }
-  }
+  };
   const getPosts = async () => {
+    setloading(true);
     try {
-      let response = await axios.get(`http://10.0.2.2:8000/api/blogs`)
+      const token = await AsyncStorage.getItem('token');
+      let response = await axios.get(`http://172.20.80.99:8000/api/blogs`
+        , {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
       let data = response.data;
       setData(data);
+      setloading(false);
     } catch (error) {
       console.error(error);
     }
   };
   const getSearchPost = async (search) => {
+    let params = {
+      searchitem: search,
+    }
     try {
-      let response = await axios.get(`http://10.0.2.2:8000/api/blogs?searchitem=${search}`)
+      const token = await AsyncStorage.getItem('token');
+      let response = await axios.get(`http://172.20.80.99:8000/api/blogs`, {
+        params: params,
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
       let data = response.data;
       setData(data);
     } catch (error) {
@@ -35,16 +76,25 @@ const HomeScreen = ({ navigation }) => {
     }
   };
   const destroy = async (id) => {
-    alert(id);
-    await fetch('http://10.0.2.2:8000/api/blogs/delete', {
+    setModalVisible(true);
+    setselectedId(id);
+  }
+
+
+  const cut = async (id) => {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`http://172.20.80.99:8000/api/blogs/delete`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({ id })
     }).then(
-      getPosts
+      getPosts()
+    ).then(
+      setModalVisible(false)
     )
   }
   const edit = async (id, title, description, status) => {
@@ -53,18 +103,40 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     getPosts();
-  }, []);
+    if (route.params?.setloading) {
+      setloading(true);
+    }
+  }, [route.params]);
 
+  const Item = ({ item }) => {
+    return (
+      <View style={{ backgroundColor: '#f0ffff', padding: 30, marginHorizontal: 30, marginVertical: 20, borderRadius: 40 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Title :</Text><Text> {item.title}</Text></View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Description :</Text><Text> {item.description}</Text></View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Created User :</Text><Text> {item.pname}</Text></View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Created at :</Text><Text>{moment(item.date).format('DD-MM-YYYY')} </Text></View>
+        <View style={{ flexDirection: "row", justifyContent: 'space-around', marginVertical: 10 }}>
+          <TouchableOpacity style={[styles.button, styles.colorone,]} onPress={() => edit(item.id, item.title, item.description, item.status)}>
+            <Text style={{
+              color: '#000000', fontWeight: 'bold',
+              textAlign: 'center',
+            }}>Edit</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.color]} onPress={() => destroy(item.id)}><Text style={styles.textStyle}>Delete</Text></TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
   return (
-    <View style={{ paddingBottom: 100 }} >
+    <View style={{ paddingBottom: 300, backgroundColor: '#c96d76' }}>
+      <Dialog isVisible={loading} overlayStyle={{ backgroundColor: "rgba(255, 255, 255, 0.3)" }}>
+        <Dialog.Loading />
+      </Dialog>
       {data ? (
         <View>
-          <Button title='download' onPress={() => download()} />
-          <Button title='refresh' onPress={() => getPosts()} />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 20, paddingHorizontal: 20 }}>
             <TextInput
               style={{
-                width: '60%',
+                width: '70%',
                 backgroundColor: '#f0f0f0',
                 height: 50,
                 elevation: 2,
@@ -76,21 +148,45 @@ const HomeScreen = ({ navigation }) => {
               onChangeText={text => setsearch(text)}
               value={search}
             />
-            <TouchableHighlight style={[styles.button, styles.buttonClose]} onPress={() => getSearchPost(search)}><Text style={styles.textStyle}>Search</Text></TouchableHighlight>
+            <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={() => getSearchPost(search)}><Text style={styles.textStyle}>Search</Text></TouchableOpacity>
           </View>
-          <Button title='CreatePost' onPress={() => navigation.navigate('Create')} />
+          <View style={{ flexDirection: "row", justifyContent: 'space-around', marginVertical: 10 }}>
+            <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={() => download()}><Text style={styles.textStyle}>Download</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={() => navigation.navigate('Upload')}><Text style={styles.textStyle}>Upload</Text></TouchableOpacity>
+            <TouchableOpacity style={{
+              backgroundColor: "#34eb9e", borderRadius: 20,
+              padding: 10,
+              elevation: 2,
+            }} onPress={() => navigation.navigate('Create')}><Text style={{ color: '#000000' }}>Add Posts</Text></TouchableOpacity>
+          </View>
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => {
+              setModalVisible(!modalVisible);
+            }}>
+            <View style={styles.centeredView}>
+              <View style={styles.modalView}>
+                <Text style={styles.modalText}>Are you sure you want to delete!!!</Text>
+                <View style={{ flexDirection: 'row' }}>
+                  <Pressable
+                    style={[styles.button, styles.buttonClose]}
+                    onPress={() => setModalVisible(!modalVisible)}>
+                    <Text style={styles.textStyle}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.button, styles.buttonClose, styles.margin]}
+                    onPress={() => cut(selectedId)}>
+                    <Text style={styles.textStyle}>delete</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
           <FlatList
             data={data}
-            renderItem={({ item }) =>
-              <View style={{ backgroundColor: '#000000', padding: 10, margin: 10 }}>
-                <Text style={{ color: '#fff' }}>Title : {item.title}</Text>
-                <Text style={{ color: '#fff' }}>Description : {item.description}</Text>
-                <Text style={{ color: '#fff' }}>Created User : {item.pname}</Text>
-                <Text style={{ color: '#fff' }}>Created at :{item.created_at} </Text>
-                <Button title='edit' onPress={() => edit(item.id, item.title, item.description, item.status)} />
-                <Button title='delete' onPress={() => destroy(item.id)} />
-              </View>
-            }
+            renderItem={({ item }) => <Item item={item} />}
           />
         </View>
       ) : (
@@ -112,11 +208,19 @@ const styles = StyleSheet.create({
     padding: 10,
     elevation: 2,
   },
-  textinput: {
-    height: 40,
-    width: '30%',
-    borderWidth: 1,
-    borderRadius: 20
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  colorone: {
+    backgroundColor: 'yellow',
+  },
+  color: {
+    backgroundColor: 'red'
+  },
+  buttonOpen: {
+    backgroundColor: '#F194FF',
   },
   buttonClose: {
     backgroundColor: '#2196F3',
@@ -126,6 +230,48 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  textinput: {
+    height: 40,
+    width: '30%',
+    borderWidth: 1,
+    borderRadius: 20
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonClose: {
+    backgroundColor: '#2196F3',
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  margin: {
+    marginLeft: 50
+  }
 });
 
 export default HomeScreen;

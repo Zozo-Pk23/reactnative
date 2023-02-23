@@ -27,13 +27,18 @@ const UserAddScreen = ({ navigation }) => {
     const [datePickerVisible, setDatePickerVisible] = useState(false);
     const [isFocus, setIsFocus] = useState(false);
     const [uri, seturi] = useState();
+    const [error, seterror] = useState({});
 
     const Confrim = async (name, email, password, confirmpassword, address, phone, selectedDate, selectedImage, value, uri) => {
         try {
-            const base64 = await RNFetchBlob.fs.readFile(selectedImage.assets[0].uri, 'base64');
-            const response = await fetch('http://10.0.2.2:8000/api/profile/create', {
+            const token = await AsyncStorage.getItem('token');
+
+            const base64 = selectedImage ? await RNFetchBlob.fs.readFile(selectedImage.assets[0].uri, 'base64') : null;
+
+            const response = await fetch('http://172.20.80.99:8000/api/profile/create', {
                 method: 'POST',
                 headers: {
+                    'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
@@ -44,11 +49,11 @@ const UserAddScreen = ({ navigation }) => {
                 console.log('Validation Success');
                 navigation.navigate('userConfirm', { name: name, email: email, password: password, address: address, phone: phone, selectedDate: selectedDate, selectedImage: selectedImage, value: value, image: base64 });
             } else {
-                console.log(result.errors);
+                seterror(result.errors);
             }
         }
         catch (error) {
-            return error.response.data.errors;
+            console.error(error);
         }
     }
 
@@ -80,12 +85,30 @@ const UserAddScreen = ({ navigation }) => {
                     source={selectedImage && selectedImage.assets ? ({ uri: selectedImage.assets[0].uri }) : ({ uri: 'http://t1.gstatic.com/licensed-image?q=tbn:ANd9GcT2VEmIR68pPnPgko_LL5shFwfUOuAhX0JAx_CIVhohEWoArcpr9H2VXPgZRiy3_1UIGhiwd8xnqMgdtNA' })}
                 />
                 <Button title='Select an Image' onPress={launch} />
-                <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10, marginTop: 10 }} placeholder="Enter your name" value={name} onChangeText={text => setName(text)} />
-                <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Email" value={email} onChangeText={text => setemail(text)} />
-                <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Password}" value={password} onChangeText={text => setpassword(text)} />
-                <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Confirm Password" value={confirmpassword} onChangeText={text => setconfirmpassword(text)} />
-                <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Phone Number" value={phone} onChangeText={text => setphone(text)} />
-                <TextInput style={{ width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Address" numberOfLines={7} multiline={true} value={address} onChangeText={text => setaddress(text)} />
+                {error.image && (
+                    <Text style={{ color: 'red' }}>{error.image}</Text>
+                )}
+                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10, marginTop: 10 }} placeholder="Enter your name" value={name} onChangeText={text => setName(text)} />
+                {error.name && (
+                    <Text style={{ color: 'red' }}>{error.name}</Text>
+                )}
+                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Email" value={email} onChangeText={text => setemail(text)} />
+                {error.email && (
+                    <Text style={{ color: 'red' }}>{error.email}</Text>
+                )}
+                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Password}" value={password} onChangeText={text => setpassword(text)} />
+                {error.password && (
+                    <Text style={{ color: 'red' }}>{error.password}</Text>
+                )}
+                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Confirm Password" value={confirmpassword} onChangeText={text => setconfirmpassword(text)} />
+                {error.confirmpassword && (
+                    <Text style={{ color: 'red' }}>{error.confirmpassword}</Text>
+                )}
+                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Phone Number" value={phone} onChangeText={text => setphone(text)} keyboardType='numeric' selectTextOnFocus={true} />
+                {error.phone && (
+                    <Text style={{ color: 'red' }}>{error.phone}</Text>
+                )}
+                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Address" numberOfLines={7} multiline={true} value={address} onChangeText={text => setaddress(text)} />
 
                 <Button title="Select a date" onPress={showDatePicker} />
                 <View style={{ flexDirection: 'row' }}>
@@ -102,7 +125,13 @@ const UserAddScreen = ({ navigation }) => {
                     </Text>
                 </View>
                 <Dropdown
-                    style={[styles.dropdown, isFocus && { borderColor: 'blue' }]}
+                    style={{
+                        borderColor: 'blue', borderRadius: 30, height: 50,
+                        borderColor: '#000000',
+                        borderWidth: 1,
+                        paddingHorizontal: 8,
+                        width: '100%',
+                    }}
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     inputSearchStyle={styles.inputSearchStyle}
@@ -118,7 +147,7 @@ const UserAddScreen = ({ navigation }) => {
                         setIsFocus(false);
                     }}
                 />
-                <TouchableOpacity style={{ paddingHorizontal: 30, paddingVertical: 10, backgroundColor: 'springgreen', marginTop: 10 }}
+                <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 30, paddingVertical: 20, backgroundColor: 'springgreen', marginTop: 10 }}
                     onPress={() => Confrim(name, email, password, confirmpassword, phone, address, selectedDate, selectedImage, value, uri)}
                 ><Text style={{ fontSize: 14 }}>Confrim</Text></TouchableOpacity>
             </View>
