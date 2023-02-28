@@ -4,38 +4,26 @@ import { View, Text, Button, StyleSheet, Modal } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
 import { FlatList, ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import RNFetchBlob from 'rn-fetch-blob';
+import postapi from '../api/postapi';
 
 const UploadScreen = ({ navigation }) => {
     const [file, setFile] = useState(null);
     const [errorMessage, seterrorMessage] = useState({});
     const [error, seterror] = useState({});
     const upload = async (file) => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-            const base64 = await RNFetchBlob.fs.readFile(file[0].uri, 'base64')
-            await fetch('http:172.20.80.99:8000/api/blogs/upload', {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token,
-                },
-                body: JSON.stringify({ file: file[0], uri: base64, })
-            }).then(res => res.json())
-                .then(resData => {
-                    console.log(resData);
-                    if (resData.success) {
-                        navigation.navigate('Home', { setloading: true });
-                    } else {
-                        console.log(JSON.stringify(resData.message));
-                        seterror(resData.message)
-                        console.log(JSON.stringify(resData[1]))
-                        seterrorMessage(resData[1]);
-                    }
-                })
-        } catch (error) {
-            console.error(error);
-        }
+        postapi.upload(file)
+            .then(resData => {
+                console.log(resData);
+                if (resData.success) {
+                    navigation.navigate('Home', { setloading: true });
+                } else {
+                    // console.log(JSON.stringify(resData.message));
+                    seterror(resData.message)
+                    //console.log(JSON.stringify(resData[1]))
+                    seterrorMessage(resData[1]);
+                }
+            })
+
     }
     const pickDocument = async () => {
         try {

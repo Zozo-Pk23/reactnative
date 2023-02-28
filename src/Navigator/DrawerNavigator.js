@@ -1,5 +1,5 @@
 import Button, { TouchableOpacity } from 'react-native-gesture-handler';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import HomeStack from './HomeStack';
 import UsersStack from './UsersStack';
@@ -9,11 +9,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Text } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
+import { AuthContext } from '../../ApiService';
 const Drawer = createDrawerNavigator();
 
 export default function MyDrawer({ onLogout }) {
     const navigation = useNavigation();
     const [data, setData] = useState([]);
+    const { logout } = useContext(AuthContext);
     const getProfile = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
@@ -32,37 +34,63 @@ export default function MyDrawer({ onLogout }) {
         }
     };
     function handleLogout() {
-        AsyncStorage.removeItem('token').then(() => {
-            onLogout();
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-            });
-        });
+        AsyncStorage.removeItem('token')
+        logout
+        // .then(() => {
+        //     onLogout();
+        //     navigation.reset({
+        //         index: 0,
+        //         routes: [{ name: 'Login' }],
+        //     });
+        // });
     }
     useEffect(() => {
         getProfile();
     }, [])
     return (
-        <Drawer.Navigator initialRouteName="Home" drawerContent={props => {
+        <Drawer.Navigator initialRouteName="HomeStack" drawerContent={props => {
             return (
                 <DrawerContentScrollView {...props}>
                     <DrawerItemList {...props} />
-                    <DrawerItem label="Logout" onPress={() => handleLogout()} />
+                    <DrawerItem
+                        label="My Profile"
+                        onPress={() => navigation.navigate('Profile', { screen: 'myProfile', params: { message: null } })}
+                    />
+                    <DrawerItem
+                        label="Posts"
+                        onPress={() => { navigation.navigate('HomeStack', { screen: 'Home', params: { search: null } }) }}
+                    />
+                    {data.type == 1 &&
+                        <DrawerItem
+                            label="Users"
+                            onPress={() => navigation.navigate('Users', {
+                                screen: 'UserList', params: {
+                                    searchname: null,
+                                    searhemail: null,
+                                    craetefrom: '',
+                                    createto: '',
+                                }
+                            })}
+                        />
+                    }
+                    <DrawerItem label="Logout" onPress={logout} />
                 </DrawerContentScrollView>
             )
         }}>
-            <Drawer.Screen name="HomeStack" component={HomeStack} options={{
+            <Drawer.Screen name="HomeStack" initialParams={{ screen: 'Home' }} component={HomeStack} options={{
                 drawerLabel: 'Posts',
+                headerLeft: null,
+                headerTitle: 'Posts',
+                drawerItemStyle: { height: 0 }
             }} />
             {data.type == 1 &&
-                <Drawer.Screen name='Users' component={UsersStack}
-
-
-
-                />
+                <Drawer.Screen name='Users' initialParams={{ screen: 'UserList' }} component={UsersStack} options={{
+                    drawerItemStyle: { height: 0 }
+                }} />
             }
-            <Drawer.Screen name="Profile" component={ProfileStack} />
+            <Drawer.Screen name="Profile" initialParams={{ screen: 'MyProfile' }} component={ProfileStack} options={{
+                drawerItemStyle: { height: 0 }
+            }} />
         </Drawer.Navigator>
     )
         ;

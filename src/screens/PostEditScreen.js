@@ -2,6 +2,7 @@ import { View, Text, Button, Switch } from 'react-native';
 import React, { Component, useEffect, useState } from 'react';
 import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import postapi from '../api/postapi';
 const PostEditScreen = ({ route, navigation }) => {
     const [title, setTitle] = useState(route.params.title);
     const [description, setDescription] = useState(route.params.description);
@@ -23,28 +24,15 @@ const PostEditScreen = ({ route, navigation }) => {
         seterror('');
     }
     const Confirm = async (id) => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-            await fetch(`http://172.20.80.99:8000/api/blogs/edit`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ id })
-            }).then(res => res.json()).
-                then(resData => {
-                    if (resData.success) {
-                        navigation.navigate('ConfirmEdit', { id });
-                    } else {
-                        seterror(resData.message)
-                    }
-                })
-
-        } catch (error) {
-            console.error(error);
-        }
+        postapi.ConfirmEdit(id)
+            .then(res => res.json()).
+            then(resData => {
+                if (resData.success) {
+                    navigation.navigate('ConfirmEdit', { id });
+                } else {
+                    seterror(resData.message)
+                }
+            })
     }
     useEffect(() => {
         if (route.params.status == 1) {
@@ -66,7 +54,7 @@ const PostEditScreen = ({ route, navigation }) => {
                         borderRadius: 30,
                         alignItems: 'center',
                         width: '50%',
-                        borderWidth: 1,
+                        borderWidth: 0.3,
                         fontSize: 16
                     }} />
             </View>
@@ -84,7 +72,7 @@ const PostEditScreen = ({ route, navigation }) => {
                         backgroundColor: '#fff',
                         borderRadius: 30,
                         width: '50%',
-                        borderWidth: 1,
+                        borderWidth: 0.3,
                         fontSize: 16
                     }} />
             </View>
@@ -107,17 +95,21 @@ const PostEditScreen = ({ route, navigation }) => {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 60 }}>
                 <View>
-                    <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#2196F3', marginTop: 10, marginHorizontal: 20 }}
-                        onPress={Clear}
-                    >
-                        <Text style={{ fontSize: 14, color: 'white' }}>Clear</Text>
+                    <TouchableOpacity style={{
+                        backgroundColor: "yellow", borderRadius: 20,
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        elevation: 2,
+                    }} onPress={Clear}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Clear</Text>
                     </TouchableOpacity>
                 </View>
                 <View>
-                    <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#2196F3', marginTop: 10, marginHorizontal: 20 }}
-                        onPress={() => Confirm({ id, title, description, status })}
-                    >
-                        <Text style={{ fontSize: 14, color: 'white' }}>Edit</Text>
+                    <TouchableOpacity style={{
+                        backgroundColor: "#34eb9e", borderRadius: 20,
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        elevation: 2,
+                    }} onPress={() => Confirm({ id, title, description, status })} ><Text style={{ color: '#000000', fontWeight: 'bold' }}>Confirm</Text>
                     </TouchableOpacity>
                 </View>
             </View>

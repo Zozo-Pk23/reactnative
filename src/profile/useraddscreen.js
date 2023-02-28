@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { SafeAreaView, View, Text, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, Text, Button, StyleSheet, TouchableOpacity, BackHandler, Alert } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { Avatar } from 'react-native-elements';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import AntDesign from 'react-native-vector-icons/AntDesign';
 import { Dropdown } from 'react-native-element-dropdown';
 import { ScrollView, TextInput } from 'react-native-gesture-handler';
 import RNFetchBlob from 'rn-fetch-blob';
+import api from '../api/api';
 
 const data = [
     { label: 'Admin', value: 1 },
@@ -23,41 +22,24 @@ const UserAddScreen = ({ navigation }) => {
     const [selectedDate, setSelectedDate] = useState();
     const [selectedImage, setSelectedImage] = useState();
     const [value, setValue] = useState(0);
-    const [errors, setErrors] = useState({});
     const [datePickerVisible, setDatePickerVisible] = useState(false);
     const [isFocus, setIsFocus] = useState(false);
     const [uri, seturi] = useState();
     const [error, seterror] = useState({});
 
-    const Confrim = async (name, email, password, confirmpassword, address, phone, selectedDate, selectedImage, value, uri) => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-
-            const base64 = selectedImage ? await RNFetchBlob.fs.readFile(selectedImage.assets[0].uri, 'base64') : null;
-
-            const response = await fetch('http://172.20.80.99:8000/api/profile/create', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name: name, email: email, password: password, confirmpassword: confirmpassword, address: address, phone: phone, date_of_birth: selectedDate, image: base64, type: value, uri: uri })
+    const confirm = () => {
+        api.Confrim(name, email, password, confirmpassword, phone, address, selectedDate, selectedImage, value, uri)
+            .then(({ result, base64 }) => {
+                console.log(result)
+                if (result.errors) {
+                    seterror(result.errors);
+                    console.log(result);
+                } else {
+                    console.log('Validation Success');
+                    navigation.navigate('userConfirm', { name: name, email: email, password: password, address: address, phone: phone, selectedDate: selectedDate, selectedImage: selectedImage, value: value, image: base64 });
+                }
             })
-            const result = await response.json();
-            if (result.success) {
-                console.log('Validation Success');
-                navigation.navigate('userConfirm', { name: name, email: email, password: password, address: address, phone: phone, selectedDate: selectedDate, selectedImage: selectedImage, value: value, image: base64 });
-            } else {
-                seterror(result.errors);
-            }
-        }
-        catch (error) {
-            console.error(error);
-        }
     }
-
-
     const showDatePicker = () => {
         setDatePickerVisible(true);
     };
@@ -76,6 +58,24 @@ const UserAddScreen = ({ navigation }) => {
         setSelectedImage(result);
     }
 
+    useEffect(() => {
+        const backAction = () => {
+            navigation.navigate('UserList', {
+                params: {
+                    searchname: null,
+                    searhemail: null,
+                    craetefrom: '',
+                    createto: '',
+                }
+            })
+            return true;
+        };
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction,
+        );
+        return () => backHandler.remove();
+    }, []);
     return (
         <ScrollView style={{ flex: 1 }}>
             <View style={{ padding: 20, alignItems: 'center' }}>
@@ -84,33 +84,39 @@ const UserAddScreen = ({ navigation }) => {
                     size={130}
                     source={selectedImage && selectedImage.assets ? ({ uri: selectedImage.assets[0].uri }) : ({ uri: 'http://t1.gstatic.com/licensed-image?q=tbn:ANd9GcT2VEmIR68pPnPgko_LL5shFwfUOuAhX0JAx_CIVhohEWoArcpr9H2VXPgZRiy3_1UIGhiwd8xnqMgdtNA' })}
                 />
-                <Button title='Select an Image' onPress={launch} />
-                {error.image && (
-                    <Text style={{ color: 'red' }}>{error.image}</Text>
+                <View style={{ marginTop: 20 }}>
+                    <Button title='Select an Image' onPress={launch} />
+                </View>
+                {error.selectedImage && (
+                    <Text style={{ color: 'red' }}>{error.selectedImage}</Text>
                 )}
-                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10, marginTop: 10 }} placeholder="Enter your name" value={name} onChangeText={text => setName(text)} />
+                <TextInput style={{ borderRadius: 22, backgroundColor: '#f0f0f0', paddingLeft: 40, marginVertical: 5, height: 40, width: '100%', borderWidth: 0.3, marginBottom: 10, marginTop: 10 }} placeholder="Enter your name" value={name} onChangeText={text => setName(text)} />
                 {error.name && (
                     <Text style={{ color: 'red' }}>{error.name}</Text>
                 )}
-                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Email" value={email} onChangeText={text => setemail(text)} />
+                <TextInput style={{ borderRadius: 22, backgroundColor: '#f0f0f0', paddingLeft: 40, marginVertical: 5, height: 40, width: '100%', borderWidth: 0.3, marginBottom: 10 }} placeholder="Enter your Email" value={email} onChangeText={text => setemail(text)} />
                 {error.email && (
                     <Text style={{ color: 'red' }}>{error.email}</Text>
                 )}
-                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Password}" value={password} onChangeText={text => setpassword(text)} />
+                <TextInput style={{ borderRadius: 22, backgroundColor: '#f0f0f0', paddingLeft: 40, marginVertical: 5, height: 40, width: '100%', borderWidth: 0.3, marginBottom: 10 }} placeholder="Enter your Password" value={password} onChangeText={text => setpassword(text)} />
                 {error.password && (
                     <Text style={{ color: 'red' }}>{error.password}</Text>
                 )}
-                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Confirm Password" value={confirmpassword} onChangeText={text => setconfirmpassword(text)} />
+                <TextInput style={{ borderRadius: 22, backgroundColor: '#f0f0f0', paddingLeft: 40, marginVertical: 5, height: 40, width: '100%', borderWidth: 0.3, marginBottom: 10 }} placeholder="Enter your Confirm Password" value={confirmpassword} onChangeText={text => setconfirmpassword(text)} />
                 {error.confirmpassword && (
                     <Text style={{ color: 'red' }}>{error.confirmpassword}</Text>
                 )}
-                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Phone Number" value={phone} onChangeText={text => setphone(text)} keyboardType='numeric' selectTextOnFocus={true} />
+                <TextInput style={{ borderRadius: 22, backgroundColor: '#f0f0f0', paddingLeft: 40, marginVertical: 5, height: 40, width: '100%', borderWidth: 0.3, marginBottom: 10 }} placeholder="Enter your Phone Number" value={phone} onChangeText={text => setphone(text)} keyboardType='numeric' selectTextOnFocus={true} />
                 {error.phone && (
                     <Text style={{ color: 'red' }}>{error.phone}</Text>
                 )}
-                <TextInput style={{ borderRadius: 30, width: '100%', borderWidth: 1, marginBottom: 10 }} placeholder="Enter your Address" numberOfLines={7} multiline={true} value={address} onChangeText={text => setaddress(text)} />
+                <TextInput style={{ borderRadius: 22, backgroundColor: '#f0f0f0', paddingLeft: 40, marginVertical: 5, height: 100, width: '100%', borderWidth: 0.3, marginBottom: 10 }} placeholder="Enter your Address" numberOfLines={7} multiline={true} value={address} onChangeText={text => setaddress(text)} />
 
                 <Button title="Select a date" onPress={showDatePicker} />
+
+                {error.date_of_birth && (
+                    <Text style={{ color: 'red' }}>{error.date_of_birth}</Text>
+                )}
                 <View style={{ flexDirection: 'row' }}>
                     <DateTimePickerModal
                         date={selectedDate}
@@ -120,19 +126,23 @@ const UserAddScreen = ({ navigation }) => {
                         onConfirm={handleConfirm}
                         onCancel={hideDatePicker}
                     />
-                    <Text style={{ fontSize: 16 }}>
+                    <Text style={{ fontSize: 16, marginTop: 5 }}>
                         {selectedDate ? selectedDate.toLocaleDateString() : 'No date selected'}
                     </Text>
                 </View>
                 <Dropdown
                     style={{
-                        borderColor: 'blue', borderRadius: 30, height: 50,
+                        marginTop: 10,
+                        borderColor: 'blue', borderRadius: 30, height: 40,
                         borderColor: '#000000',
-                        borderWidth: 1,
+                        backgroundColor: '#f0f0f0',
+                        borderWidth: 0.3,
                         paddingHorizontal: 8,
                         width: '100%',
+                        paddingLeft: 40
                     }}
                     placeholderStyle={styles.placeholderStyle}
+                    placeholderTextColor="#909090"
                     selectedTextStyle={styles.selectedTextStyle}
                     inputSearchStyle={styles.inputSearchStyle}
                     data={data}
@@ -147,9 +157,14 @@ const UserAddScreen = ({ navigation }) => {
                         setIsFocus(false);
                     }}
                 />
-                <TouchableOpacity style={{ borderRadius: 30, paddingHorizontal: 30, paddingVertical: 20, backgroundColor: 'springgreen', marginTop: 10 }}
-                    onPress={() => Confrim(name, email, password, confirmpassword, phone, address, selectedDate, selectedImage, value, uri)}
-                ><Text style={{ fontSize: 14 }}>Confrim</Text></TouchableOpacity>
+                <TouchableOpacity style={{
+                    marginTop: 20,
+                    backgroundColor: "#34eb9e", borderRadius: 20,
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    elevation: 2,
+                }} onPress={() => confirm()}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Confirm</Text>
+                </TouchableOpacity>
             </View>
         </ScrollView>
     );
@@ -160,7 +175,7 @@ const styles = StyleSheet.create({
     dropdown: {
         height: 50,
         borderColor: '#000000',
-        borderWidth: 1,
+        borderWidth: 0.3,
         paddingHorizontal: 8,
         width: '100%',
     },

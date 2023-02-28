@@ -1,22 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Avatar, Button } from 'react-native-elements';
+import { TouchableOpacity } from 'react-native-gesture-handler';
+import api from '../api/api';
 const UserAddConfirm = ({ route, navigation }) => {
-
     const create = async (data) => {
-        const token = await AsyncStorage.getItem('token');
-        await fetch(`http://172.20.80.99:8000/api/profile/confirm`, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        }).then(
-            navigation.navigate('UserList', { setloading: true })
-        )
+        api.create(data)
+            .then(
+                navigation.navigate('UserList', { setloading: true })
+            )
     }
     return (
         <View style={{ flex: 1 }}>
@@ -46,12 +38,24 @@ const UserAddConfirm = ({ route, navigation }) => {
                 <View style={{ flexDirection: "row", justifyContent: 'space-between' }}>
                     <Text>Address</Text><Text>{route.params.address}</Text>
                 </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 60 }}>
                     <View>
-                        <Button title="Go back" onPress={() => navigation.goBack()} />
+                        <TouchableOpacity style={{
+                            backgroundColor: "yellow", borderRadius: 20,
+                            paddingVertical: 10,
+                            paddingHorizontal: 20,
+                            elevation: 2,
+                        }} onPress={() => navigation.goBack()}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Cancel</Text>
+                        </TouchableOpacity>
                     </View>
                     <View>
-                        <Button title="Confrim" onPress={() => create(route.params)} />
+                        <TouchableOpacity style={{
+                            backgroundColor: "#34eb9e", borderRadius: 20,
+                            paddingVertical: 10,
+                            paddingHorizontal: 20,
+                            elevation: 2,
+                        }} onPress={() => create(route.params)}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Confirm</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>

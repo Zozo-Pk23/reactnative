@@ -1,8 +1,8 @@
 import { createStackNavigator } from "@react-navigation/stack";
-import MyProfile from "../profile/myprofilescreen";
-import PasswordReset from "../profile/passwordresetscreen";
-import ProfileEditConfirm from "../profile/profileeditconfirm";
-import ProfileEditScreen from "../profile/profileeditscreen";
+import MyProfile from "../profile/MyProfileScreen";
+import PasswordReset from "../profile/PasswordResetScreen";
+import ProfileEditConfirm from "../profile/ProfileEditConfirm";
+import ProfileEditScreen from "../profile/ProfileEditScreen";
 const Stack = createStackNavigator();
 export default function ProfileStack({ navigation }) {
     return (

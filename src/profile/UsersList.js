@@ -1,16 +1,15 @@
-import axios from "axios";
 import React, { useState, useEffect } from "react";
-import { Text, View, FlatList, Button, Modal, StyleSheet, Pressable, TouchableOpacity } from 'react-native';
+import { Text, View, FlatList, Button, Modal, StyleSheet, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { TextInput } from "react-native-gesture-handler";
 import { Avatar, Icon } from "react-native-elements";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Dialog } from "@rneui/base/dist/Dialog";
 import moment from "moment";
+import api from "../api/api";
 const UserList = ({ route, navigation }) => {
     const [loading, setloading] = useState(false);
     const [users, setusers] = useState();
-    const [data, setData] = useState([]);
+    const [data, setData] = useState({});
     const [selectedId, setselectedId] = useState(null);
     const [searchname, setsearchname] = useState(null);
     const [searchemail, setsearchemail] = useState(null);
@@ -21,93 +20,22 @@ const UserList = ({ route, navigation }) => {
     const [detailmodal, setdetailmodal] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [selecteddata, setselecteddata] = useState(null);
-    const getAllUsers = async () => {
-        const token = await AsyncStorage.getItem('token');
-        try {
-            await axios.get(`http://172.20.80.99:8000/api/profile/`, {
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                }
+    const search = () => {
+        api.getSearchUser(searchname, searchemail, createdfrom, createdto)
+            .then((data) => {
+                console.log(data);
+                setusers(data);
             })
-                .then(({ data }) => {
-                    console.log(data);
-                    setusers(data);
-                })
-        } catch (error) {
-            console.error(error);
-        }
-    }
-    const getProfile = async () => {
-        setloading(true);
-        try {
-            const token = await AsyncStorage.getItem('token');
-            const response = await axios.get(`http://172.20.80.99:8000/api/getUser`,
-                {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-            setData(response.data.user);
-            setloading(false);
-            console.log(response.data.user.type);
-        } catch (error) {
-            if (error.response === 429) {
-                console.log('Too many requests, try again later.');
-            } else {
-                console.error(error);
-            }
-        }
-    };
-    const getSearchUser = async (searchname, searchemail, createdfrom, createdto) => {
-        const token = await AsyncStorage.getItem('token');
-
-        const date = new Date(createdfrom);
-        const dateone = new Date(createdto);
-        let formattedDate = null;
-        let formattedDateOne = null;
-        if (dateone && !isNaN(dateone.getTime())) {
-            formattedDate = `${dateone.getFullYear()}-${("0" + (dateone.getMonth() + 1)).slice(-2)}-${("0" + dateone.getDate()).slice(-2)}`;
-        }
-
-        if (date && !isNaN(date.getTime())) {
-            formattedDateOne = `${date.getFullYear()}-${("0" + (date.getMonth() + 1)).slice(-2)}-${("0" + date.getDate()).slice(-2)}`;
-        }
-        let params = {
-            searchname: searchname,
-            searchemail: searchemail,
-        }
-        if (formattedDate) {
-            params.createdfrom = formattedDateOne;
-        }
-
-        if (formattedDateOne) {
-            params.createdto = formattedDate;
-        }
-        try {
-            console.log(searchemail, searchname, formattedDate, formattedDate);
-            await axios.get(`http://172.20.80.99:8000/api/profile`,
-                {
-                    params: params,
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                    }
-                }
-            )
-                .then(({ data }) => {
-                    console.log(data);
-                    setusers(data);
-                })
-                .then(() => {
-                    setsearchname(null);
-                    setsearchemail(null);
-                    setcreatedfrom();
-                    setcreatedto();
-                }
-                )
-        }
-        catch (error) {
-            console.error(error);
-        }
     }
 
+    const lost = async (id) => {
+        api.cut(id)
+            .then(
+                api.getAllUsers().then((data) => {
+                    setusers(data);
+                })
+            ).then(setModalVisible(false))
+    }
     const details = async (item) => {
         console.log(item);
         setdetailmodal(true);
@@ -118,25 +46,6 @@ const UserList = ({ route, navigation }) => {
         setModalVisible(true);
         setselectedId(id);
     }
-
-
-    const cut = async (id) => {
-        const token = await AsyncStorage.getItem('token');
-        await fetch(`http://172.20.80.99:8000/api/profile/delete`, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ id })
-        }).then(
-            getAllUsers()
-        ).then(
-            setModalVisible(false)
-        )
-    }
-
     const showDatePicker = () => {
         setDatePickerVisible(true);
     };
@@ -149,8 +58,6 @@ const UserList = ({ route, navigation }) => {
         setcreatedfrom(date);
         hideDatePicker();
     };
-
-    //////////////////
 
     const showDatePickerOne = () => {
         setDatePickerVisibleOne(true);
@@ -165,12 +72,30 @@ const UserList = ({ route, navigation }) => {
         hideDatePickerOne();
     };
 
-
     useEffect(() => {
-        getAllUsers();
-        getProfile();
+        setloading(true);
+        if (route.params) {
+            setloading(true);
+            setsearchemail(route.params.email);
+            setsearchname(route.params.name);
+            setcreatedfrom(route.params.createdfrom);
+            setcreatedto(route.params.createdto);
+            setloading(false)
+        }
+        api.getAllUsers().then((data) => {
+            setusers(data);
+            setloading(false);
+        })
+        api.getProfile().then((data) => {
+            setData(data);
+            setloading(false);
+        });
         if (route.params?.setloading) {
             setloading(true);
+            api.getAllUsers().then((data) => {
+                setusers(data);
+                setloading(false);
+            })
         }
     }, [route.params]);
 
@@ -202,10 +127,15 @@ const UserList = ({ route, navigation }) => {
     }
 
     return (
-        <View style={{ paddingBottom: 200, backgroundColor: '#c96d76' }}>
-            <Dialog isVisible={loading} overlayStyle={{ backgroundColor: "rgba(255, 255, 255, 0.3)" }}>
+        <View style={{ paddingBottom: 200 }}>
+            {/* <Dialog isVisible={loading} overlayStyle={{ backgroundColor: "rgba(255, 255, 255, 0.3)" }}>
                 <Dialog.Loading />
-            </Dialog>
+            </Dialog> */}
+            {loading ? (
+                <View style={styles.activityIndicator}>
+                    <ActivityIndicator size="large" color="#0000ff" />
+                </View>
+            ) : null}
             <Modal animationType="slide" transparent={true} visible={detailmodal} onRequestClose={() => {
 
                 setdetailmodal(!detailmodal);
@@ -233,7 +163,7 @@ const UserList = ({ route, navigation }) => {
                 }}>
                 <View style={styles.centeredView}>
                     <View style={styles.modalView}>
-                        <Text style={styles.modalText}>Are you sure you want to delete!!!</Text>
+                        <Text style={styles.modalText}>Are you sure you want to delete?</Text>
                         <View style={{ flexDirection: 'row' }}>
                             <Pressable
                                 style={[styles.button, styles.buttonClose]}
@@ -242,7 +172,7 @@ const UserList = ({ route, navigation }) => {
                             </Pressable>
                             <Pressable
                                 style={[styles.button, styles.buttonClose, styles.margin]}
-                                onPress={() => cut(selectedId)}>
+                                onPress={() => lost(selectedId)}>
                                 <Text style={styles.textStyle}>delete</Text>
                             </Pressable>
                         </View>
@@ -255,7 +185,7 @@ const UserList = ({ route, navigation }) => {
                     <TextInput style={styles.textinput} placeholder="Search email" onChangeText={text => setsearchemail(text)} value={searchemail} />
                     <TouchableOpacity style={{ alignItems: 'center', backgroundColor: '#34eb9e', padding: 10, borderRadius: 20, width: 70 }} onPress={() => navigation.navigate('Useradd')}>
 
-                        <Text>Add</Text>
+                        <Text style={{ fontWeight: 'bold', color: '#000000' }}>Add</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: 'space-between', marginTop: 20 }} >
@@ -278,13 +208,13 @@ const UserList = ({ route, navigation }) => {
                         onConfirm={handleConfirmOne}
                         onCancel={hideDatePickerOne}
                     />
-                    <TouchableOpacity style={{ backgroundColor: '#2196F3', padding: 10, borderRadius: 20, width: 70 }} onPress={() => getSearchUser(searchname, searchemail, createdfrom, createdto)}><Text style={styles.textStyle}>Search</Text></TouchableOpacity>
+                    <TouchableOpacity style={{ backgroundColor: '#2196F3', padding: 10, borderRadius: 20, width: 70 }} onPress={search}><Text style={styles.textStyle}>Search</Text></TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: "row", marginVertical: 20, justifyContent: 'space-evenly' }} >
-                    <Text style={{ fontSize: 16, color: '#ffffff' }}>
+                <View style={{ marginVertical: 20, justifyContent: 'space-evenly' }} >
+                    <Text style={{ fontSize: 16, color: '#000000' }}>
                         Created From :{createdfrom ? createdfrom.toLocaleDateString() : ' '}
                     </Text>
-                    <Text style={{ fontSize: 16, color: '#ffffff' }}>
+                    <Text style={{ fontSize: 16, color: '#000000' }}>
                         Created To   :{createdto ? createdto.toLocaleDateString() : ' '}
                     </Text>
                 </View>
@@ -315,19 +245,20 @@ const UserList = ({ route, navigation }) => {
                                         <Text>Address</Text><Text>{item.address}</Text>
                                     </View>
                                     <View style={{ flexDirection: "row", justifyContent: 'space-between' }}>
-                                        <Text>Created at</Text><Text>{moment(item.createdat).format('DD-MM-YYYY')}</Text>
+                                        <Text>Created at</Text><Text>{moment(item.created_at).format('DD-MM-YYYY')}</Text>
                                     </View>
                                     <View style={{ flexDirection: "row", justifyContent: 'space-between' }}>
-                                        <Text>Updated at</Text><Text>{moment(item.updatedat).format('DD-MM-YYYY')}</Text>
+                                        <Text>Updated at</Text><Text>{moment(item.updated_at).format('DD-MM-YYYY')}</Text>
                                     </View>
-                                    <View style={{ flexDirection: "row", justifyContent: 'space-between' }}>
+                                    <View style={{ flexDirection: "row", justifyContent: 'space-between', marginTop: 20 }}>
                                         <View></View>
-
                                         <View>
                                             {item.id != data.id &&
-                                                <TouchableOpacity onPress={() => destroy(item.id)} style={{ backgroundColor: '#ff3333', padding: 10, borderWidth: 1, borderRadius: 15 }}>
-                                                    <Text style={{ color: "#ffffff", fontWeight: 'bold' }}>Delete</Text>
-                                                </TouchableOpacity>
+                                                <Pressable
+                                                    style={[styles.button, styles.buttonClose, styles.margin]}
+                                                    onPress={() => destroy(item.id)}>
+                                                    <Text style={styles.textStyle}>delete</Text>
+                                                </Pressable>
                                             }
                                         </View>
                                     </View>
@@ -369,6 +300,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     textinput: {
+        borderWidth: 0.2,
         paddingLeft: 10,
         width: '30%',
         backgroundColor: '#f0f0f0',
@@ -398,7 +330,11 @@ const styles = StyleSheet.create({
     margin: {
         marginLeft: 15,
         backgroundColor: 'red'
-    }
+    }, activityIndicator: {
+        position: 'absolute',
+        top: '50%',
+        right: '50%'
+    },
 });
 
 export default UserList;

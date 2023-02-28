@@ -1,118 +1,70 @@
 import React, { Component, useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View, FlatList, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, FlatList, Alert, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
 import { Modal } from 'react-native';
 import { Pressable } from 'react-native';
 import { Dialog } from "@rneui/base";
 import moment from 'moment';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-var RNFS = require('react-native-fs');
+import postapi from '../api/postapi';
 const HomeScreen = ({ route, navigation }) => {
+  console.log(route.params);
   const [data, setData] = useState([]);
   const [detailmodal, setdetailmodal] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedId, setselectedId] = useState(null);
-  const [search, setsearch] = useState(null);
+  const [search, setsearch] = useState();
   const [loading, setloading] = useState(false);
   const download = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      let response = await axios.get(`http://172.20.80.99:8000/api/blogs`
-        , {
-          headers: { 'Authorization': 'Bearer ' + token }
-        })
-      let data = response.data;
-      console.log(data);
-
-      let csv = '';
-      const header = Object.keys(data[0]).join(',');
-      csv += header + '\n';
-
-      data.forEach(row => {
-        const values = Object.values(row).join(',');
-        csv += values + '\n';
-      });
-      const dir = RNFS.ExternalDirectoryPath;
-      const path = `${dir}/api_data.csv`;
-      console.log(path);
-      RNFS.writeFile(path, csv, 'utf8')
-        .then(() => alert('CSV file saved successfully'))
-        .catch(error => console.error(error));
-    }
-    catch (error) {
-      console.error(error);
-    }
-  };
-  const getPosts = async () => {
-    setloading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      let response = await axios.get(`http://172.20.80.99:8000/api/blogs`
-        , {
-          headers: { 'Authorization': 'Bearer ' + token }
-        })
-      let data = response.data;
-      setData(data);
-      setloading(false);
-    } catch (error) {
-      console.error(error);
-    }
+    postapi.download();
   };
   const getSearchPost = async (search) => {
-    let params = {
-      searchitem: search,
-    }
-    try {
-      const token = await AsyncStorage.getItem('token');
-      let response = await axios.get(`http://172.20.80.99:8000/api/blogs`, {
-        params: params,
-        headers: { 'Authorization': 'Bearer ' + token }
-      })
-      let data = response.data;
+    postapi.getSearchPost(search).then((data) => {
       setData(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    })
+  }
   const destroy = async (id) => {
     setModalVisible(true);
     setselectedId(id);
   }
-
-
   const cut = async (id) => {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`http://172.20.80.99:8000/api/blogs/delete`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({ id })
-    }).then(
-      getPosts()
-    ).then(
-      setModalVisible(false)
-    )
+    postapi.lost(id)
+      .then(
+        postapi.getPosts().then((data) => {
+          setData(data);
+        })
+      ).then(
+        setModalVisible(false)
+      )
   }
   const edit = async (id, title, description, status) => {
     navigation.navigate('Edit', { id: id, title: title, description: description, status: status })
   }
 
   useEffect(() => {
-    getPosts();
+    setloading(true);
+    setsearch(null);
+    postapi.getPosts().then((data) => {
+      setData(data);
+      setloading(false);
+    })
+    if (route.params) {
+      setsearch(route.params.search);
+    }
     if (route.params?.setloading) {
       setloading(true);
+      postapi.getPosts().then((data) => {
+        setData(data);
+        setloading(false);
+      })
     }
-  }, [route.params]);
+  }, [route.params], []);
 
   const Item = ({ item }) => {
     return (
-      <View style={{ backgroundColor: '#f0ffff', padding: 30, marginHorizontal: 30, marginVertical: 20, borderRadius: 40 }}>
+      <View style={{ backgroundColor: '#f0ffff', padding: 30, marginHorizontal: 30, marginVertical: 20, borderRadius: 40, width: 350 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Title :</Text><Text> {item.title}</Text></View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Description :</Text><Text> {item.description}</Text></View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Description :</Text><View style={{ width: 160, alignItems: 'flex-end' }}><Text style={{ textAlign: 'right' }}> {item.description}</Text></View></View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Created User :</Text><Text> {item.pname}</Text></View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text>Created at :</Text><Text>{moment(item.date).format('DD-MM-YYYY')} </Text></View>
         <View style={{ flexDirection: "row", justifyContent: 'space-around', marginVertical: 10 }}>
@@ -123,14 +75,19 @@ const HomeScreen = ({ route, navigation }) => {
             }}>Edit</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.button, styles.color]} onPress={() => destroy(item.id)}><Text style={styles.textStyle}>Delete</Text></TouchableOpacity>
         </View>
-      </View>
+      </View >
     )
   }
   return (
-    <View style={{ paddingBottom: 300, backgroundColor: '#c96d76' }}>
-      <Dialog isVisible={loading} overlayStyle={{ backgroundColor: "rgba(255, 255, 255, 0.3)" }}>
+    <View style={{ paddingBottom: 300, flex: 1 }}>
+      {/* <Dialog isVisible={loading} overlayStyle={{ backgroundColor: "rgba(255, 255, 255, 0),", shadowOpacity: 0 }}>
         <Dialog.Loading />
-      </Dialog>
+      </Dialog> */}
+      {loading ? (
+        <View style={styles.activityIndicator}>
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
+      ) : null}
       {data ? (
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 20, paddingHorizontal: 20 }}>
@@ -138,10 +95,10 @@ const HomeScreen = ({ route, navigation }) => {
               style={{
                 width: '70%',
                 backgroundColor: '#f0f0f0',
-                height: 50,
-                elevation: 2,
+                height: 40,
                 borderRadius: 22,
                 paddingLeft: 40,
+                borderWidth: 0.3
               }}
               placeholder="Enter title or description"
               placeholderTextColor="#909090"
@@ -151,13 +108,14 @@ const HomeScreen = ({ route, navigation }) => {
             <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={() => getSearchPost(search)}><Text style={styles.textStyle}>Search</Text></TouchableOpacity>
           </View>
           <View style={{ flexDirection: "row", justifyContent: 'space-around', marginVertical: 10 }}>
-            <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={() => download()}><Text style={styles.textStyle}>Download</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={download}><Text style={styles.textStyle}>Download</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={() => navigation.navigate('Upload')}><Text style={styles.textStyle}>Upload</Text></TouchableOpacity>
             <TouchableOpacity style={{
               backgroundColor: "#34eb9e", borderRadius: 20,
-              padding: 10,
+              paddingVertical: 10,
+              paddingHorizontal: 20,
               elevation: 2,
-            }} onPress={() => navigation.navigate('Create')}><Text style={{ color: '#000000' }}>Add Posts</Text></TouchableOpacity>
+            }} onPress={() => navigation.navigate('Create')}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Add</Text></TouchableOpacity>
           </View>
           <Modal
             animationType="slide"
@@ -168,7 +126,7 @@ const HomeScreen = ({ route, navigation }) => {
             }}>
             <View style={styles.centeredView}>
               <View style={styles.modalView}>
-                <Text style={styles.modalText}>Are you sure you want to delete!!!</Text>
+                <Text style={styles.modalText}>Are you sure you want to delete?</Text>
                 <View style={{ flexDirection: 'row' }}>
                   <Pressable
                     style={[styles.button, styles.buttonClose]}
@@ -237,7 +195,7 @@ const styles = StyleSheet.create({
   textinput: {
     height: 40,
     width: '30%',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 20
   },
   centeredView: {
@@ -245,6 +203,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 22,
+  },
+  activityIndicator: {
+    position: 'absolute',
+    top: '50%',
+    right: '50%'
   },
   modalView: {
     margin: 20,
@@ -270,8 +233,86 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   margin: {
-    marginLeft: 50
+    marginLeft: 50,
+    backgroundColor: 'red'
   }
 });
 
 export default HomeScreen;
+// const download = async () => {
+  //   try {
+  //     const token = await AsyncStorage.getItem('token');
+  //     let response = await axios.get(`http://172.20.80.99:8000/api/blogs`
+  //       , {
+  //         headers: { 'Authorization': 'Bearer ' + token }
+  //       })
+  //     let data = response.data;
+  //     console.log(data);
+
+  //     let csv = '';
+  //     const header = Object.keys(data[0]).join(',');
+  //     csv += header + '\n';
+
+  //     data.forEach(row => {
+  //       const values = Object.values(row).join(',');
+  //       csv += values + '\n';
+  //     });
+  //     const dir = RNFS.ExternalDirectoryPath;
+  //     const path = `${dir}/api_data.csv`;
+  //     console.log(path);
+  //     RNFS.writeFile(path, csv, 'utf8')
+  //       .then(() => alert('CSV file saved successfully'))
+  //       .catch(error => console.error(error));
+  //   }
+  //   catch (error) {
+  //     console.error(error);
+  //   }
+  // };
+  // const getPosts = async () => {
+  //   setloading(true);
+  //   try {
+  //     const token = await AsyncStorage.getItem('token');
+  //     let response = await axios.get(`http://172.20.80.99:8000/api/blogs`
+  //       , {
+  //         headers: { 'Authorization': 'Bearer ' + token }
+  //       })
+  //     let data = response.data;
+  //     setData(data);
+  //     setloading(false);
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // };
+  // const getSearchPost = async (search) => {
+  //   let params = {
+  //     searchitem: search,
+  //   }
+  //   try {
+  //     const token = await AsyncStorage.getItem('token');
+  //     let response = await axios.get(`http://172.20.80.99:8000/api/blogs`, {
+  //       params: params,
+  //       headers: { 'Authorization': 'Bearer ' + token }
+  //     })
+  //     let data = response.data;
+  //     setData(data);
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // };
+
+  // const cut = async (id) => {
+  //   const token = await AsyncStorage.getItem('token');
+  //   await fetch(`http://172.20.80.99:8000/api/blogs/delete`, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Accept': 'application/json',
+  //       'Content-Type': 'application/json',
+  //       'Authorization': 'Bearer ' + token
+  //     },
+  //     body: JSON.stringify({ id })
+  //   }).then(
+  //     getPosts()
+  //   ).then(
+  //     setModalVisible(false)
+  //   )
+  // }

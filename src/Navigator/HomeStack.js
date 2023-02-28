@@ -1,16 +1,16 @@
+import HomeScreen from "../screens/PostList";
+import CreatePostScreen from "../screens/PostCreateScreen";
+import ConfirmPostScreen from "../screens/ConfirmPostScreen";
+import PostEditScreen from "../screens/PostEditScreen";
+import EditPostConfirm from "../screens/PostEditConfirm";
+import UploadScreen from "../screens/UploadScreen";
 import { createStackNavigator } from "@react-navigation/stack";
-import HomeScreen from "../screens/homeScreen";
-import CreatePostScreen from "../screens/createpostscreen";
-import ConfirmPostScreen from "../screens/confirmpostscreen";
-import PostEditScreen from "../screens/editpostscreen";
-import EditPostConfirm from "../screens/editpostconfirm";
-import UploadScreen from "../screens/uploadscreen";
 const Stack = createStackNavigator();
 export default function HomeStack({ navigation }) {
     return (
         <Stack.Navigator screenOptions={{
             headerShown: false
-        }}>
+        }} initialRouteName="Home">
             <Stack.Screen name='Home' component={HomeScreen} />
             <Stack.Screen name='Create' component={CreatePostScreen} />
             <Stack.Screen name='Confirm' component={ConfirmPostScreen} options={({ navigation })} />
