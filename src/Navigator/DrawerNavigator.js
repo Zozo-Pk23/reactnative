@@ -10,43 +10,18 @@ import axios from 'axios';
 import { Text } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../../ApiService';
+import api from '../api/api';
 const Drawer = createDrawerNavigator();
 
 export default function MyDrawer({ onLogout }) {
     const navigation = useNavigation();
-    const [data, setData] = useState([]);
+    const [data, setData] = useState({});
     const { logout } = useContext(AuthContext);
-    const getProfile = async () => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-            const response = await axios.get(`http://172.20.80.99:8000/api/getUser`,
-                {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-            setData(response.data.user);
-            console.log(response.data.user.type);
-        } catch (error) {
-            if (error.response === 429) {
-                console.log('Too many requests, try again later.');
-            } else {
-                console.error(error);
-            }
-        }
-    };
-    function handleLogout() {
-        AsyncStorage.removeItem('token')
-        logout
-        // .then(() => {
-        //     onLogout();
-        //     navigation.reset({
-        //         index: 0,
-        //         routes: [{ name: 'Login' }],
-        //     });
-        // });
-    }
     useEffect(() => {
-        getProfile();
-    }, [])
+        api.getProfile().then((data) => {
+            setData(data);
+        });
+    }, []);
     return (
         <Drawer.Navigator initialRouteName="HomeStack" drawerContent={props => {
             return (

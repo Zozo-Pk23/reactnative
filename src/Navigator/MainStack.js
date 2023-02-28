@@ -31,7 +31,7 @@ const MainStack = ({ route, navigation }) => {
     }, []);
     return (
         <NavigationContainer>
-            {token ? (
+            {userInfo.token ? (
                 <Stack.Navigator screenOptions={{ headerShown: false }}>
                     <Stack.Screen name='MyDrawer' component={MyDrawer} />
                 </Stack.Navigator>

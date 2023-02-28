@@ -34,11 +34,14 @@ const MyProfile = ({ route, navigation }) => {
         navigation.navigate('editProfile', { data });
     }
     useEffect(() => {
+        setloading(true);
         if (route.params) {
-            setMessage('');
+            setMessage(route.params.message);
+            setloading(false);
         }
         api.getProfile().then((data) => {
             setData(data);
+            setloading(false);
         });
         if (route.params?.setloading) {
             api.getProfile().then((data) => {
@@ -46,9 +49,9 @@ const MyProfile = ({ route, navigation }) => {
             });
         }
         if (route.params?.success) {
-            setMessage('Successfully Updated')
+            setMessage('Successfully Updated');
         }
-    }, [route.params]);
+    }, [route.params?.success], []);
     return (
         <View style={{ flex: 1 }}>
 
@@ -105,7 +108,6 @@ const MyProfile = ({ route, navigation }) => {
                 </View>
             </View>
         </View >
-
     )
 
 }

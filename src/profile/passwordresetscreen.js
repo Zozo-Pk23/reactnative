@@ -14,6 +14,7 @@ export default function PasswordReset({ onLogout, navigation }) {
     const confirm = async (data, password, newpassword, confirmpassword) => {
         api.ForgotPassword(data)
             .then(resData => {
+                console.log(resData);
                 seterror(resData.message);
                 if (resData.user) {
                     AsyncStorage.removeItem('token');

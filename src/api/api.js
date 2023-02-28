@@ -24,7 +24,8 @@ class api {
                 {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
-            data = response.data.user;
+            data = response.data;
+            // console.log(data);
             return data;
         } catch (error) {
             if (error.response === 429) {

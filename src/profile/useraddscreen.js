@@ -27,6 +27,15 @@ const UserAddScreen = ({ navigation }) => {
     const [uri, seturi] = useState();
     const [error, seterror] = useState({});
 
+    const clear = () => {
+        setName('');
+        setemail('');
+        setpassword('');
+        setconfirmpassword('');
+        setphone('');
+        setaddress('');
+        seterror('');
+    }
     const confirm = () => {
         api.Confrim(name, email, password, confirmpassword, phone, address, selectedDate, selectedImage, value, uri)
             .then(({ result, base64 }) => {
@@ -157,14 +166,24 @@ const UserAddScreen = ({ navigation }) => {
                         setIsFocus(false);
                     }}
                 />
-                <TouchableOpacity style={{
-                    marginTop: 20,
-                    backgroundColor: "#34eb9e", borderRadius: 20,
-                    paddingVertical: 10,
-                    paddingHorizontal: 20,
-                    elevation: 2,
-                }} onPress={() => confirm()}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Confirm</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity style={{
+                        marginTop: 20,
+                        backgroundColor: "yellow", borderRadius: 20, marginRight: 50,
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        elevation: 2,
+                    }} onPress={() => clear()}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Clear</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={{
+                        marginTop: 20,
+                        backgroundColor: "#34eb9e", borderRadius: 20,
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        elevation: 2,
+                    }} onPress={() => confirm()}><Text style={{ color: '#000000', fontWeight: 'bold' }}>Confirm</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </ScrollView>
     );

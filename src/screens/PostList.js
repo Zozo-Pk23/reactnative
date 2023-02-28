@@ -79,7 +79,7 @@ const HomeScreen = ({ route, navigation }) => {
     )
   }
   return (
-    <View style={{ paddingBottom: 300, flex: 1 }}>
+    <View style={{ paddingBottom: 150, flex: 1 }}>
       {/* <Dialog isVisible={loading} overlayStyle={{ backgroundColor: "rgba(255, 255, 255, 0),", shadowOpacity: 0 }}>
         <Dialog.Loading />
       </Dialog> */}
